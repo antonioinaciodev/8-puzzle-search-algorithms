@@ -1,3 +1,6 @@
+from collections import deque
+
+
 class Node:
     def __init__(self, state, parent=None, depth=0):
         self.state = state
@@ -17,59 +20,29 @@ def generate_children(board: list[int]) -> list[list[int]]:
     children = []
     empty_pos = board.index(0)
     
-    match empty_pos:
-        case 0:
-            for target_pos in [1, 3]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-        case 1:
-            for target_pos in [0, 2, 4]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-        case 2:
-            for target_pos in [1, 5]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-        case 3:
-            for target_pos in [0, 4, 6]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-        case 4:
-            for target_pos in [1, 3, 5, 7]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-        case 5:
-            for target_pos in [2, 4, 8]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-        case 6:
-            for target_pos in [3, 7]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-        case 7:
-            for target_pos in [4, 6, 8]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-        case 8:
-            for target_pos in [5, 7]:
-                child = board.copy()
-                child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
-                children.append(child)
-                
+    lado = 3 if len(board) == 9 else 4
+    
+    linha = empty_pos // lado
+    coluna = empty_pos % lado
+    
+    movimentos_validos = []
+    
+    if linha > 0:          movimentos_validos.append(empty_pos - lado) # Cima
+    if linha < lado - 1:   movimentos_validos.append(empty_pos + lado) # Baixo
+    if coluna > 0:         movimentos_validos.append(empty_pos - 1)    # Esquerda
+    if coluna < lado - 1:  movimentos_validos.append(empty_pos + 1)    # Direita
+        
+    for target_pos in movimentos_validos:
+        child = board.copy()
+        child[empty_pos], child[target_pos] = child[target_pos], child[empty_pos]
+        children.append(child)
+            
     return children
 
 
 def breadth_first_search(initial_state: list[int], goal_state: list[int]) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
-    frontier = [start_node]
+    frontier = deque([start_node])
     explored = set()
     
     # métricas
@@ -84,7 +57,7 @@ def breadth_first_search(initial_state: list[int], goal_state: list[int]) -> tup
             max_frontier_size = len(frontier)
         
         # atualiza a métrica de tempo de execução
-        current_node = frontier.pop(0)
+        current_node = frontier.popleft()
         nodes_visited += 1
         
         if current_node.state == goal_state:
@@ -131,6 +104,12 @@ def depth_first_search(initial_state: list[int], goal_state: list[int]) -> tuple
         if current_node.state == goal_state:
             return current_node, nodes_visited, max_frontier_size, max_depth
         
+        # limite de profundidade se não bagunça
+        """
+        if current_node.depth >= 32:
+            continue
+        """
+        
         explored.add(tuple(current_node.state))
         
         children_states = generate_children(current_node.state)
@@ -152,19 +131,18 @@ def depth_first_search(initial_state: list[int], goal_state: list[int]) -> tuple
 def calculate_manhattan(state: list[int], goal_state: list[int]) -> int:
     distance = 0
     
-    # Vamos olhar para cada número de 1 a 8 (ignoramos o 0, que é o espaço vazio)
-    for number in range(1, 9):
-        # Acha a coordenada atual da peça (linha e coluna)
+    for number in range(1, len(state)):
+        # acha a coordenada atual da peça (linha e coluna)
         current_index = state.index(number)
         current_row = current_index // 3
         current_col = current_index % 3
         
-        # Acha a coordenada de onde a peça DEVERIA estar
+        # acha a coordenada de onde a peça deveria estar
         goal_index = goal_state.index(number)
         goal_row = goal_index // 3
         goal_col = goal_index % 3
         
-        # DESAFIO: Como calcular a distância em passos usando as 4 variáveis acima?
+        # calculo da distancia sem diagonais: |X2 - X1| + |Y2 - Y1|
         passos_da_peca = abs(goal_row - current_row) + abs(goal_col - current_col)
         
         distance += passos_da_peca
