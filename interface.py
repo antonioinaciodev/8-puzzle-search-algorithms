@@ -18,6 +18,7 @@ TILE_NORMAL = "#3D3D58"
 TILE_EMPTY  = "#252536"
 TILE_MOVED  = "#4A3F12"
 TILE_GOAL   = "#1A3D2E"
+
 FONT_TITLE  = ("Segoe UI", 16, "bold")
 FONT_BOLD   = ("Segoe UI", 11, "bold")
 FONT_BODY   = ("Segoe UI", 10)
