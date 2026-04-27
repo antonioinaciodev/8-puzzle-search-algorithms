@@ -1,5 +1,9 @@
 from collections import deque
 
+def _report_progress(progress_cb, visited, max_frontier_size, max_depth):
+    if progress_cb is not None:
+        progress_cb(visited, max_frontier_size, max_depth)
+
 
 class Node:
     def __init__(self, state, parent=None, depth=0):
@@ -40,7 +44,7 @@ def generate_children(board: list[int]) -> list[list[int]]:
     return children
 
 
-def breadth_first_search(initial_state: list[int], goal_state: list[int]) -> tuple[Node | None, int, int, int]:
+def breadth_first_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
     frontier = deque([start_node])
     explored = set()
@@ -51,14 +55,17 @@ def breadth_first_search(initial_state: list[int], goal_state: list[int]) -> tup
     max_depth = 0
     
     while frontier:
+        if cancel_event is not None and cancel_event.is_set():
+            return None, nodes_visited, max_frontier_size, max_depth
         
-        # atualiza a métrica de memória máxima utilizada
         if len(frontier) > max_frontier_size:
             max_frontier_size = len(frontier)
         
-        # atualiza a métrica de tempo de execução
         current_node = frontier.popleft()
         nodes_visited += 1
+
+        if nodes_visited % 500 == 0:
+            _report_progress(progress_cb, nodes_visited, max_frontier_size, max_depth)
         
         if current_node.state == goal_state:
             return current_node, nodes_visited, max_frontier_size, max_depth
@@ -68,11 +75,9 @@ def breadth_first_search(initial_state: list[int], goal_state: list[int]) -> tup
         children_states = generate_children(current_node.state)
         
         for child_state in children_states:
-            # se o estado filho não foi explorado ainda e não tem nenhum estado igual na fronteira, crie um novo nó na fronteira com o estado filho.
             if tuple(child_state) not in explored and not any(n.state == child_state for n in frontier):
                 new_node = Node(child_state, parent=current_node, depth=current_node.depth + 1)
             
-                # atualiza a métrica de profundidade máxima
                 if new_node.depth > max_depth:
                     max_depth = new_node.depth
                 
@@ -81,45 +86,43 @@ def breadth_first_search(initial_state: list[int], goal_state: list[int]) -> tup
     return None, nodes_visited, max_frontier_size, max_depth
 
 
-def depth_first_search(initial_state: list[int], goal_state: list[int]) -> tuple[Node | None, int, int, int]:
+def depth_first_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None, limit: int = 32) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
     frontier = [start_node]
     explored = set()
     
-    # métricas
     nodes_visited = 0
     max_frontier_size = 1
     max_depth = 0
     
     while frontier:
+        if cancel_event is not None and cancel_event.is_set():
+            return None, nodes_visited, max_frontier_size, max_depth
         
-        # atualiza a métrica de memória máxima utilizada
         if len(frontier) > max_frontier_size:
             max_frontier_size = len(frontier)
         
-        # atualiza a métrica de tempo de execução
         current_node = frontier.pop()
         nodes_visited += 1
+
+        if nodes_visited % 500 == 0:
+            _report_progress(progress_cb, nodes_visited, max_frontier_size, max_depth)
         
         if current_node.state == goal_state:
             return current_node, nodes_visited, max_frontier_size, max_depth
         
-        # limite de profundidade se não bagunça
-        """
-        if current_node.depth >= 32:
-            continue
-        """
+        ''' Descomentar esta parte para implementar o limite de profundidade na DFS. '''
+        # if current_node.depth >= limit:
+        #     continue
         
         explored.add(tuple(current_node.state))
         
         children_states = generate_children(current_node.state)
         
         for child_state in children_states:
-            # se o estado filho não foi explorado ainda e não tem nenhum estado igual na fronteira, crie um novo nó na fronteira com o estado filho.
             if tuple(child_state) not in explored and not any(n.state == child_state for n in frontier):
                 new_node = Node(child_state, parent=current_node, depth=current_node.depth + 1)
             
-                # atualiza a métrica de profundidade máxima
                 if new_node.depth > max_depth:
                         max_depth = new_node.depth
                 
@@ -130,19 +133,17 @@ def depth_first_search(initial_state: list[int], goal_state: list[int]) -> tuple
 
 def calculate_manhattan(state: list[int], goal_state: list[int]) -> int:
     distance = 0
+    lado = 3 if len(state) == 9 else 4
     
     for number in range(1, len(state)):
-        # acha a coordenada atual da peça (linha e coluna)
         current_index = state.index(number)
-        current_row = current_index // 3
-        current_col = current_index % 3
+        current_row = current_index // lado
+        current_col = current_index % lado
         
-        # acha a coordenada de onde a peça deveria estar
         goal_index = goal_state.index(number)
-        goal_row = goal_index // 3
-        goal_col = goal_index % 3
+        goal_row = goal_index // lado
+        goal_col = goal_index % lado
         
-        # calculo da distancia sem diagonais: |X2 - X1| + |Y2 - Y1|
         passos_da_peca = abs(goal_row - current_row) + abs(goal_col - current_col)
         
         distance += passos_da_peca
@@ -150,28 +151,29 @@ def calculate_manhattan(state: list[int], goal_state: list[int]) -> int:
     return distance
 
 
-def greedy_search(initial_state: list[int], goal_state: list[int]) -> tuple[Node | None, int, int, int]:
+def greedy_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
     frontier = [start_node]
     explored = set()
     
-    # métricas
     nodes_visited = 0
     max_frontier_size = 1
     max_depth = 0
     
     while frontier:
+        if cancel_event is not None and cancel_event.is_set():
+            return None, nodes_visited, max_frontier_size, max_depth
         
-        # atualiza a métrica de memória máxima utilizada
         if len(frontier) > max_frontier_size:
             max_frontier_size = len(frontier)
         
-        # ordena a fronteira de acordo com os valores heurísticos H e popa o menorzin.
         frontier.sort(key=lambda node: calculate_manhattan(node.state, goal_state))
         current_node = frontier.pop(0)
         
-        # atualiza a métrica de tempo de execução
         nodes_visited += 1
+
+        if nodes_visited % 200 == 0:
+            _report_progress(progress_cb, nodes_visited, max_frontier_size, max_depth)
         
         if current_node.state == goal_state:
             return current_node, nodes_visited, max_frontier_size, max_depth
@@ -181,11 +183,9 @@ def greedy_search(initial_state: list[int], goal_state: list[int]) -> tuple[Node
         children_states = generate_children(current_node.state)
         
         for child_state in children_states:
-            # se o estado filho não foi explorado ainda e não tem nenhum estado igual na fronteira, crie um novo nó na fronteira com o estado filho.
             if tuple(child_state) not in explored and not any(n.state == child_state for n in frontier):
                 new_node = Node(child_state, parent=current_node, depth=current_node.depth + 1)
             
-                # atualiza a métrica de profundidade máxima
                 if new_node.depth > max_depth:
                         max_depth = new_node.depth
                 
@@ -194,28 +194,29 @@ def greedy_search(initial_state: list[int], goal_state: list[int]) -> tuple[Node
     return None, nodes_visited, max_frontier_size, max_depth
 
 
-def a_star_search(initial_state: list[int], goal_state: list[int]) -> tuple[Node | None, int, int, int]:
+def a_star_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
     frontier = [start_node]
     explored = set()
     
-    # métricas
     nodes_visited = 0
     max_frontier_size = 1
     max_depth = 0
     
     while frontier:
+        if cancel_event is not None and cancel_event.is_set():
+            return None, nodes_visited, max_frontier_size, max_depth
         
-        # atualiza a métrica de memória máxima utilizada
         if len(frontier) > max_frontier_size:
             max_frontier_size = len(frontier)
         
-        # ordena a fronteira de acordo a profundidade do nó + valor heurístico H do e popa o menorzin.
         frontier.sort(key=lambda node: node.depth + calculate_manhattan(node.state, goal_state))
         current_node = frontier.pop(0)
         
-        # atualiza a métrica de tempo de execução
         nodes_visited += 1
+
+        if nodes_visited % 200 == 0:
+            _report_progress(progress_cb, nodes_visited, max_frontier_size, max_depth)
         
         if current_node.state == goal_state:
             return current_node, nodes_visited, max_frontier_size, max_depth
@@ -225,11 +226,9 @@ def a_star_search(initial_state: list[int], goal_state: list[int]) -> tuple[Node
         children_states = generate_children(current_node.state)
         
         for child_state in children_states:
-            # se o estado filho não foi explorado ainda e não tem nenhum estado igual na fronteira, crie um novo nó na fronteira com o estado filho.
             if tuple(child_state) not in explored and not any(n.state == child_state for n in frontier):
                 new_node = Node(child_state, parent=current_node, depth=current_node.depth + 1)
             
-                # atualiza a métrica de profundidade máxima
                 if new_node.depth > max_depth:
                         max_depth = new_node.depth
                 
