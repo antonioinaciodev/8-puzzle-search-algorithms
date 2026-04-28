@@ -271,7 +271,7 @@ class App(tk.Tk):
 
         leg = tk.Frame(p, bg=BG)
         leg.pack(fill="x", padx=8, pady=(10, 0))
-        tk.Label(leg, text="Heurística: Distância de Manhattan  |  *DFS com limite de profundidade 32",
+        tk.Label(leg, text="Heurística: Distância de Manhattan",
                  font=FONT_SMALL, bg=BG, fg=TEXT_DIM).pack(anchor="w")
 
     def _build_steps_tab(self):

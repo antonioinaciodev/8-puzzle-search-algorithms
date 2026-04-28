@@ -1,8 +1,5 @@
+import heapq
 from collections import deque
-
-def _report_progress(progress_cb, visited, max_frontier_size, max_depth):
-    if progress_cb is not None:
-        progress_cb(visited, max_frontier_size, max_depth)
 
 
 class Node:
@@ -18,6 +15,11 @@ class Node:
             path.append(current.state)
             current = current.parent
         return path[::-1]
+
+
+def _report_progress(progress_cb, visited, max_frontier_size, max_depth):
+    if progress_cb is not None:
+        progress_cb(visited, max_frontier_size, max_depth)
 
 
 def generate_children(board: list[int]) -> list[list[int]]:
@@ -48,6 +50,7 @@ def breadth_first_search(initial_state: list[int], goal_state: list[int], progre
     start_node = Node(initial_state, depth=0)
     frontier = deque([start_node])
     explored = set()
+    frontier_states = {tuple(initial_state)}
     
     # métricas
     nodes_visited = 0
@@ -62,6 +65,7 @@ def breadth_first_search(initial_state: list[int], goal_state: list[int], progre
             max_frontier_size = len(frontier)
         
         current_node = frontier.popleft()
+        frontier_states.discard(tuple(current_node.state))
         nodes_visited += 1
 
         if nodes_visited % 500 == 0:
@@ -75,13 +79,14 @@ def breadth_first_search(initial_state: list[int], goal_state: list[int], progre
         children_states = generate_children(current_node.state)
         
         for child_state in children_states:
-            if tuple(child_state) not in explored and not any(n.state == child_state for n in frontier):
+            if tuple(child_state) not in explored and tuple(child_state) not in frontier_states:
                 new_node = Node(child_state, parent=current_node, depth=current_node.depth + 1)
             
                 if new_node.depth > max_depth:
                     max_depth = new_node.depth
                 
                 frontier.append(new_node)
+                frontier_states.add(tuple(child_state))
             
     return None, nodes_visited, max_frontier_size, max_depth
 
@@ -90,6 +95,7 @@ def depth_first_search(initial_state: list[int], goal_state: list[int], progress
     start_node = Node(initial_state, depth=0)
     frontier = [start_node]
     explored = set()
+    frontier_states = {tuple(initial_state)}
     
     nodes_visited = 0
     max_frontier_size = 1
@@ -103,6 +109,7 @@ def depth_first_search(initial_state: list[int], goal_state: list[int], progress
             max_frontier_size = len(frontier)
         
         current_node = frontier.pop()
+        frontier_states.discard(tuple(current_node.state))
         nodes_visited += 1
 
         if nodes_visited % 500 == 0:
@@ -120,13 +127,14 @@ def depth_first_search(initial_state: list[int], goal_state: list[int], progress
         children_states = generate_children(current_node.state)
         
         for child_state in children_states:
-            if tuple(child_state) not in explored and not any(n.state == child_state for n in frontier):
+            if tuple(child_state) not in explored and tuple(child_state) not in frontier_states:
                 new_node = Node(child_state, parent=current_node, depth=current_node.depth + 1)
             
                 if new_node.depth > max_depth:
                         max_depth = new_node.depth
                 
                 frontier.append(new_node)
+                frontier_states.add(tuple(child_state))
             
     return None, nodes_visited, max_frontier_size, max_depth
 
@@ -153,8 +161,15 @@ def calculate_manhattan(state: list[int], goal_state: list[int]) -> int:
 
 def greedy_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
-    frontier = [start_node]
+    
+    # calculo da nota H do nó inicial
+    start_node.h = calculate_manhattan(start_node.state, goal_state)
+    
+    frontier = []
+    heapq.heappush(frontier, (start_node.h, id(start_node), start_node))
+    
     explored = set()
+    frontier_states = {tuple(initial_state)}
     
     nodes_visited = 0
     max_frontier_size = 1
@@ -167,8 +182,8 @@ def greedy_search(initial_state: list[int], goal_state: list[int], progress_cb=N
         if len(frontier) > max_frontier_size:
             max_frontier_size = len(frontier)
         
-        frontier.sort(key=lambda node: calculate_manhattan(node.state, goal_state))
-        current_node = frontier.pop(0)
+        _, _, current_node = heapq.heappop(frontier)
+        frontier_states.discard(tuple(current_node.state))
         
         nodes_visited += 1
 
@@ -183,21 +198,30 @@ def greedy_search(initial_state: list[int], goal_state: list[int], progress_cb=N
         children_states = generate_children(current_node.state)
         
         for child_state in children_states:
-            if tuple(child_state) not in explored and not any(n.state == child_state for n in frontier):
+            if tuple(child_state) not in explored and tuple(child_state) not in frontier_states:
                 new_node = Node(child_state, parent=current_node, depth=current_node.depth + 1)
             
                 if new_node.depth > max_depth:
                         max_depth = new_node.depth
                 
-                frontier.append(new_node)
+                new_node.h = calculate_manhattan(child_state, goal_state)
+                heapq.heappush(frontier, (new_node.h, id(new_node), new_node))
+                frontier_states.add(tuple(child_state))
             
     return None, nodes_visited, max_frontier_size, max_depth
 
 
 def a_star_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
-    frontier = [start_node]
+    
+    # calculo da nota F do nó inicial
+    start_node.f = start_node.depth + calculate_manhattan(start_node.state, goal_state)
+    
+    frontier = []
+    heapq.heappush(frontier, (start_node.f, id(start_node), start_node))
+    
     explored = set()
+    frontier_states = {tuple(initial_state)}
     
     nodes_visited = 0
     max_frontier_size = 1
@@ -210,8 +234,8 @@ def a_star_search(initial_state: list[int], goal_state: list[int], progress_cb=N
         if len(frontier) > max_frontier_size:
             max_frontier_size = len(frontier)
         
-        frontier.sort(key=lambda node: node.depth + calculate_manhattan(node.state, goal_state))
-        current_node = frontier.pop(0)
+        _, _, current_node = heapq.heappop(frontier)
+        frontier_states.discard(tuple(current_node.state))
         
         nodes_visited += 1
 
@@ -226,12 +250,14 @@ def a_star_search(initial_state: list[int], goal_state: list[int], progress_cb=N
         children_states = generate_children(current_node.state)
         
         for child_state in children_states:
-            if tuple(child_state) not in explored and not any(n.state == child_state for n in frontier):
+            if tuple(child_state) not in explored and tuple(child_state) not in frontier_states:
                 new_node = Node(child_state, parent=current_node, depth=current_node.depth + 1)
             
                 if new_node.depth > max_depth:
                         max_depth = new_node.depth
                 
-                frontier.append(new_node)
+                new_node.f = new_node.depth + calculate_manhattan(child_state, goal_state)
+                heapq.heappush(frontier, (new_node.f, id(new_node), new_node))
+                frontier_states.add(tuple(child_state))
             
     return None, nodes_visited, max_frontier_size, max_depth
