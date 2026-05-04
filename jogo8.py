@@ -46,6 +46,26 @@ def generate_children(board: list[int]) -> list[list[int]]:
     return children
 
 
+def calculate_manhattan(state: list[int], goal_state: list[int]) -> int:
+    distance = 0
+    lado = 3 if len(state) == 9 else 4
+    
+    for number in range(1, len(state)):
+        current_index = state.index(number)
+        current_row = current_index // lado
+        current_col = current_index % lado
+        
+        goal_index = goal_state.index(number)
+        goal_row = goal_index // lado
+        goal_col = goal_index % lado
+        
+        passos_da_peca = abs(goal_row - current_row) + abs(goal_col - current_col)
+        
+        distance += passos_da_peca
+        
+    return distance
+
+
 def breadth_first_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
     frontier = deque([start_node])
@@ -91,7 +111,7 @@ def breadth_first_search(initial_state: list[int], goal_state: list[int], progre
     return None, nodes_visited, max_frontier_size, max_depth
 
 
-def depth_first_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None, limit: int = 32) -> tuple[Node | None, int, int, int]:
+def depth_first_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
     frontier = [start_node]
     explored = set()
@@ -117,11 +137,7 @@ def depth_first_search(initial_state: list[int], goal_state: list[int], progress
         
         if current_node.state == goal_state:
             return current_node, nodes_visited, max_frontier_size, max_depth
-        
-        ''' Descomentar esta parte para implementar o limite de profundidade na DFS. '''
-        # if current_node.depth >= limit:
-        #     continue
-        
+                
         explored.add(tuple(current_node.state))
         
         children_states = generate_children(current_node.state)
@@ -139,30 +155,9 @@ def depth_first_search(initial_state: list[int], goal_state: list[int], progress
     return None, nodes_visited, max_frontier_size, max_depth
 
 
-def calculate_manhattan(state: list[int], goal_state: list[int]) -> int:
-    distance = 0
-    lado = 3 if len(state) == 9 else 4
-    
-    for number in range(1, len(state)):
-        current_index = state.index(number)
-        current_row = current_index // lado
-        current_col = current_index % lado
-        
-        goal_index = goal_state.index(number)
-        goal_row = goal_index // lado
-        goal_col = goal_index % lado
-        
-        passos_da_peca = abs(goal_row - current_row) + abs(goal_col - current_col)
-        
-        distance += passos_da_peca
-        
-    return distance
-
-
 def greedy_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
     
-    # calculo da nota H do nó inicial
     start_node.h = calculate_manhattan(start_node.state, goal_state)
     
     frontier = []
@@ -214,7 +209,6 @@ def greedy_search(initial_state: list[int], goal_state: list[int], progress_cb=N
 def a_star_search(initial_state: list[int], goal_state: list[int], progress_cb=None, cancel_event=None) -> tuple[Node | None, int, int, int]:
     start_node = Node(initial_state, depth=0)
     
-    # calculo da nota F do nó inicial
     start_node.f = start_node.depth + calculate_manhattan(start_node.state, goal_state)
     
     frontier = []

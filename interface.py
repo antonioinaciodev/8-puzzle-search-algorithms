@@ -264,10 +264,7 @@ class App(tk.Tk):
             self.tree.heading(col, text=col)
             self.tree.column(col, width=w, anchor="center", minwidth=60)
 
-        sb = ttk.Scrollbar(p, orient="horizontal", command=self.tree.xview)
-        self.tree.configure(xscrollcommand=sb.set)
         self.tree.pack(fill="x", padx=8, pady=(12, 0))
-        sb.pack(fill="x", padx=8)
 
         leg = tk.Frame(p, bg=BG)
         leg.pack(fill="x", padx=8, pady=(10, 0))
@@ -501,7 +498,6 @@ class App(tk.Tk):
 
         best_moves   = min(v["moves"]   for v in found.values())
         best_visited = min(v["visited"] for v in found.values())
-        best_maxF    = min(v["maxF"]    for v in found.values())
 
         for name, r in self.results.items():
             otimo = "Sim" if r and r.get("moves") == best_moves else "Não"
