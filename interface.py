@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import time
 import threading
-from jogo8 import breadth_first_search, depth_first_search, greedy_search, a_star_search
+from search_algorithms import breadth_first_search, depth_first_search, greedy_search, a_star_search
 
 BG          = "#1E1E2E"
 BG_CARD     = "#2A2A3E"
