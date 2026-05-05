@@ -31,7 +31,7 @@ O projeto foi desenvolvido em **Python** e utiliza exclusivamente bibliotecas na
 
 1. **Clone o repositório:**
    ```bash
-   git clone [https://github.com/SEU-USUARIO/8-puzzle-search-algorithms.git](https://github.com/SEU-USUARIO/8-puzzle-search-algorithms.git)
+   git clone https://github.com/antonioinaciodev/8-puzzle-search-algorithms.git
    cd 8-puzzle-search-algorithms
    ```
 
